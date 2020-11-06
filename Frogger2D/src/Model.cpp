@@ -1,9 +1,10 @@
 #include "Model.h"
+#include "Texture.h"
 
-Model::Model(Primitive prim, float width, float height, float x, float y, Color color, ModelType type)
-	: prim{ prim }, x{ x }, y{ y }, width{ width }, height{ height }, color{ color }, type{ type }
+Model::Model(Primitive prim, float width, float height, float x, float y, Color color, ModelType type, Texture* f_tex)
+	: prim{ prim }, x{ x }, y{ y }, width{ width }, height{ height }, color{ color }, type{ type }, texture{ f_tex }
 {
-	
+
 }
 
 
@@ -70,19 +71,44 @@ void Model::SetType(ModelType f_type)
 
 
 
+void Model::SetColor(Color f_color)
+{
+	color = f_color;
+}
+
+
 void Model::RenderPlane()
 {
-	glPushMatrix();
+	if (texture != NULL)
+	{
+		if(!texture->empty)
+			texture->Bind();
+		else
+			glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	else
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glPushMatrix();
 
 	glTranslatef(x, y, 0.0f);
-	glRotatef(angle, 0, 1, 0);
+
+	glRotatef(angle, rotX, rotY, rotZ);
 
 	glBegin(GL_QUADS);
-	glColor3f(color.R, color.G, color.B);
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, height, 0.0f);
-	glVertex3f(width, height, 0.0f);
-	glVertex3f(width, 0.0f, 0.0f);
+
+	if (texture == NULL || texture->empty)
+	{
+		glColor3f(color.R, color.G, color.B);
+	}
+
+	glTexCoord2f(0.0f, 0.0f);	glVertex2f(0.0f, 0.0f);
+
+	glTexCoord2f(0.0f, 1.0f);	glVertex2f(0.0f, height);
+
+	glTexCoord2f(1.0f, 1.0f);	glVertex2f(width, height);
+
+	glTexCoord2f(1.0f, 0.0f);	glVertex2f(width, 0.0f);
 	glEnd();
 
 	glPopMatrix();

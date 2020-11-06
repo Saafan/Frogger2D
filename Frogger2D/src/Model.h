@@ -11,12 +11,14 @@ enum class ModelType
 {
 	Environment,
 	Collision,
+	Goal,
 	Enemy,
 	Key,
 	Protection,
 	Water,
 	Log,
-	null
+	Coin,
+	Null
 };
 
 struct Color
@@ -30,7 +32,7 @@ class Model
 {
 
 public:
-	Model(Primitive prim = Primitive::Plane, float width = 0.0f, float height = 0.0f, float x = 0.0f, float y = 0.0f, Color color = { 1.0f, 1.0f, 1.0f }, ModelType type = ModelType::null);
+	Model(Primitive prim = Primitive::Plane, float width = 0.0f, float height = 0.0f, float x = 0.0f, float y = 0.0f, Color color = { 1.0f, 1.0f, 1.0f }, ModelType type = ModelType::Null, Texture* tex = nullptr);
 
 	void RenderPlane();
 	void RenderTriangle();
@@ -53,6 +55,8 @@ public:
 	Primitive GetPrimitive() const { return prim; }
 	void SetPrimitive(Primitive val) { prim = val; }
 
+	void SetColor(Color f_color);
+
 private:
 	Primitive prim;
 
@@ -67,6 +71,8 @@ private:
 	float rotX = 0.0f;
 	float rotY = 0.0f;
 	float rotZ = 0.0f;
+
+	Texture* texture = nullptr;
 
 	Color color;
 	ModelType type;
