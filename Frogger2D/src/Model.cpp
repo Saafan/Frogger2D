@@ -54,9 +54,13 @@ void Model::Rotate(float f_angle)
 	angle = f_angle;
 }
 
-void Model::RotateAccum(float f_angle)
+void Model::RotateAccum(float f_angle, float x, float y, float z)
 {
 	angle += f_angle;
+
+	rotX = x;
+	rotY = y;
+	rotZ = z;
 }
 
 void Model::SetType(ModelType f_type)
@@ -71,7 +75,7 @@ void Model::RenderPlane()
 	glPushMatrix();
 
 	glTranslatef(x, y, 0.0f);
-	glRotatef(angle, 0, 0, 1);
+	glRotatef(angle, 0, 1, 0);
 
 	glBegin(GL_QUADS);
 	glColor3f(color.R, color.G, color.B);

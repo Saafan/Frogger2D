@@ -9,10 +9,10 @@
 
 Model frog(Primitive::Plane, 100.0f, 100.0f, 0.0f, 0.0f, Color{ 0.2f, 0.5f, 0.3f });
 Model street(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f, Color{ 0.3f, 0.3f, 0.3f }, ModelType::Environment);
-Model rest(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 4, Color{ 0.8f, 0.3f, 0.3f }, ModelType::null);
+Model rest(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 4, Color{ 0.8f, 0.3f, 0.3f }, ModelType::Collision);
 Model water(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f * 5, Color{ 0.2f, 0.5f, 0.8f }, ModelType::Water);
 Model goal(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 8, Color{ 0.96f, 0.81, 0.0f }, ModelType::Environment);
-Model coin(Primitive::Plane, 100.0f, 100.0f, 0.0f, 0.0f, Color{ 0.2f, 0.5f, 0.3f });
+Model coin(Primitive::Plane, 100.0f, 100.0f, -50.0f, -50.0f, Color{ 0.96f, 0.81, 0.0f });
 
 
 std::vector<Model*> models;
@@ -27,7 +27,19 @@ void renderScene(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glPushMatrix();
+	ImGui_ImplOpenGL2_NewFrame();
+	ImGui_ImplGLUT_NewFrame();
+
+	{
+
+	ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+	ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+	ImGui::End();
+
+	}
 
 	//Environment
 	street.Render();
@@ -35,6 +47,7 @@ void renderScene(void)
 	water.Render();
 	goal.Render();
 
+	coin.Render();
 
 	//Enemies
 	for (size_t i = 0; i < objects.size(); i++)
@@ -47,12 +60,12 @@ void renderScene(void)
 
 	frog.Render();
 
-	glPopMatrix();
+	ImGui::Render();
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 
 	glutSwapBuffers();
-
 	CheckEnemyCollision();
-
 	glutPostRedisplay();
 }
 
@@ -90,6 +103,7 @@ void TickSpeed(int value)
 		enemy.MoveObject(value);
 	}
 	glutTimerFunc(10, TickSpeed, 10);
+	coin.RotateAccum(0.1, 0, 1, 0);
 }
 
 void ProcessInput(unsigned char key, int x_f, int y_f)
@@ -130,6 +144,8 @@ void ProcessInput(unsigned char key, int x_f, int y_f)
 int main(int argc, char** argv)
 {
 
+
+
 	models.push_back(&frog);
 	models.push_back(&rest);
 	models.push_back(&water);
@@ -139,6 +155,20 @@ int main(int argc, char** argv)
 	glutInitWindowPosition(100, 100);
 	glutInitWindowSize(WIDTH, HEIGHT);
 	glutCreateWindow("Frogger 2D");
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsClassic();
+
+	// Setup Platform/Renderer bindings
+	ImGui_ImplGLUT_Init();
+	ImGui_ImplGLUT_InstallFuncs();
+	ImGui_ImplOpenGL2_Init();
 
 	glutTimerFunc(0, Tick, 500);
 	glutTimerFunc(10, TickSpeed, 10);
@@ -152,6 +182,9 @@ int main(int argc, char** argv)
 	glutIgnoreKeyRepeat(1);
 	glutMainLoop();
 
+	ImGui_ImplOpenGL2_Shutdown();
+	ImGui_ImplGLUT_Shutdown();
+	ImGui::DestroyContext();
 
 	return 1;
 }
@@ -161,7 +194,7 @@ bool CheckStaticCollision(float nextX, float nextY)
 {
 	for (Model* model : models)
 	{
-		if (model->GetType() == ModelType::Enemy)
+		if (model->GetType() == ModelType::Collision)
 		{
 			if (nextX >= model->GetX() && nextX <= model->GetX() + model->GetWidth() - 1)
 			{
@@ -194,9 +227,9 @@ bool CheckEnemyCollision()
 					frog.Translate(0, 0);
 					return true;
 				}
-				else if (model.GetModel()->GetType() == ModelType::Log && frog.GetX() - model.GetModel()->GetX() > -5 && frog.GetX() - model.GetModel()->GetX() + frog.GetWidth()  < model.GetModel()->GetWidth())
+				else if (model.GetModel()->GetType() == ModelType::Log && frog.GetX() - model.GetModel()->GetX() > -5 && frog.GetX() - model.GetModel()->GetX() + frog.GetWidth() < model.GetModel()->GetWidth())
 					onLog = true;
-				
+
 			}
 		}
 	}
@@ -208,7 +241,7 @@ bool CheckEnemyCollision()
 			if (!onLog)
 			{
 				std::cout << "Water" << std::endl;
- 				frog.Translate(0, 0);
+				frog.Translate(0, 0);
 				return true;
 			}
 		}

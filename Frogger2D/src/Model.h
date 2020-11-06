@@ -39,7 +39,7 @@ public:
 	void Translate(float x, float y);
 	void TranslateAccum(float x, float y);
 	void Rotate(float f_angle);
-	void RotateAccum(float f_angle);
+	void RotateAccum(float f_angle, float x, float y, float z);
 
 	void SetType(ModelType f_type);
 
@@ -63,6 +63,10 @@ private:
 	float height = 0.0f;
 
 	float angle = 0.0f;
+
+	float rotX = 0.0f;
+	float rotY = 0.0f;
+	float rotZ = 0.0f;
 
 	Color color;
 	ModelType type;
