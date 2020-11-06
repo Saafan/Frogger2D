@@ -50,6 +50,9 @@ public:
 	float GetX() const { return x; }
 	float GetY() const { return y; }
 
+	Primitive GetPrimitive() const { return prim; }
+	void SetPrimitive(Primitive val) { prim = val; }
+
 private:
 	Primitive prim;
 

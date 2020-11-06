@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 
+
 const int WIDTH = 1900;
 const int HEIGHT = 1000;
 

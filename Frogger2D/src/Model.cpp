@@ -31,9 +31,9 @@ void Model::RenderTriangle()
 
 void Model::Render()
 {
-	if (prim == Primitive::Plane)
+	if (GetPrimitive() == Primitive::Plane)
 		RenderPlane();
-	if (prim == Primitive::Triangle)
+	if (GetPrimitive() == Primitive::Triangle)
 		RenderTriangle();
 }
 
