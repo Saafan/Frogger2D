@@ -7,26 +7,30 @@
 #include <imgui/imgui_impl_glut.h>
 #include "Randomize.h"
 #include "Texture.h"
+#include <string>
 
-Texture tex("images/ChernoLogo.png");
-Texture tex2("images/diamond.png");
+Texture bordersTex(".\\images\\borders.png");
+Texture grass_areaTex(".\\images\\grass_area.png");
 
-Texture coinsTex("images/coin.png");
-Texture keyTex("images/key.png");
-Texture powerUpProtectTex("images/protect.png");
-Texture frogTex("images/frog.png");
-Texture streetTex("images/street.png");
-Texture carsTex("images/car.png");
-Texture rest_collisionTex("images/rest_collision.png");
-Texture rest_normalTex("images/rest_normal.png");
-Texture frog_protectedTex("images/frog_protected.png");
-Texture targetTex("images/target.png");
-Texture waterTex("images/water.png");
-Texture logsTex("images/logs.png");
-Texture goal_areaTex("images/goal_area.png");
-Texture grass_areaTex("images/grass_area.png");
-Texture bordersTex("images/borders.png");
+Texture coinsTex(".\\images\\coin.png");
+Texture keyTex(".\\images\\key.png");
 
+Texture frogTex(".\\images\\frog.png");
+Texture frog_protectedTex(".\\images\\frog_protected.png");
+Texture powerUpProtectTex(".\\images\\protect.png");
+
+Texture streetTex(".\\images\\street.png");
+
+Texture carsTex(".\\images\\car.png");
+
+Texture rest_collisionTex(".\\images\\rest_collision.png");
+Texture rest_normalTex(".\\images\\rest_normal.png");
+
+Texture waterTex(".\\images\\water.png");
+Texture logsTex(".\\images\\logs.png");
+
+Texture goal_areaTex(".\\images\\goal_area.png");
+Texture targetTex(".\\images\\target.png");
 
 Object key(100.0f, 100.0f, 250, 250, 0, ModelType::Key, &keyTex);
 Object protection(100.0f, 100.0f, 500, 500, 0, ModelType::Protection, &powerUpProtectTex);
@@ -54,7 +58,6 @@ bool protect = false;
 
 
 
-
 void renderScene(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -62,11 +65,24 @@ void renderScene(void)
 	ImGui_ImplOpenGL2_NewFrame();
 	ImGui_ImplGLUT_NewFrame();
 
+	std::string line;
+
+
+
 
 	{
 		ImGui::Begin("Frogger2D");
 
 		ImGui::Text("This is your score: %i", score);
+
+		ImGui::SliderFloat2("Street Tiling: ", street.GetTextureCoord(), 0.1f, 10.0f);
+		ImGui::SliderFloat2("Border Tiling: ", border.GetTextureCoord(), 0.1f, 10.0f);
+		ImGui::SliderFloat2("Grass Area Tiling: ", grass.GetTextureCoord(), 0.1f, 10.0f);
+		ImGui::SliderFloat2("Rest Tiling: ", rest.GetTextureCoord(), 0.1f, 10.0f);
+		ImGui::SliderFloat2("Water Tiling: ", water.GetTextureCoord(), 0.1f, 10.0f);
+		ImGui::SliderFloat2("Goal Area Tiling: ", goal.GetTextureCoord(), 0.1f, 10.0f);
+
+
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 		ImGui::End();
@@ -76,7 +92,6 @@ void renderScene(void)
 
 	glPushMatrix();
 
-	tex.LoadTexture("images/diamond.png");
 
 	//Environment
 	street.Render();
@@ -182,11 +197,17 @@ void Restart()
 		if (object.GetModel()->GetType() == ModelType::Coin)
 			object.empty = true;
 	}
+
+
 	score = 0;
 	rest.SetType(ModelType::Collision);
 	opened = false;
 	powerTaken = false;
 	frog.SetColor(Color{ 0.2f, 0.5f, 0.3f });
+
+	rest.texture = &rest_collisionTex;
+	frog.texture = &frogTex;
+
 	GenerateCoins();
 	GenerateKeyProtection();
 }
@@ -200,24 +221,24 @@ void Tick(int value)
 		objects.emplace_back(key);
 		objects.emplace_back(protection);
 
-		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 115, 0.6));
-		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 110 * 2 + 5, 0.6));
-		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 110 * 3 + 5, 0.6));
+		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 115, 0.6, ModelType::Enemy, &carsTex));
+		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 110 * 2 + 5, 0.6, ModelType::Enemy, &carsTex));
+		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 110 * 3 + 5, 0.6, ModelType::Enemy, &carsTex));
 
-		objects.emplace_back(Object(200, 100, rand() % 300, 115, 0.6));
-		objects.emplace_back(Object(200, 100, rand() % 300, 110 * 2 + 5, 0.6));
-		objects.emplace_back(Object(200, 100, rand() % 300, 110 * 3 + 5, 0.6));
+		objects.emplace_back(Object(200, 100, rand() % 300, 115, 0.6, ModelType::Enemy, &carsTex));
+		objects.emplace_back(Object(200, 100, rand() % 300, 110 * 2 + 5, 0.6, ModelType::Enemy, &carsTex));
+		objects.emplace_back(Object(200, 100, rand() % 300, 110 * 3 + 5, 0.6, ModelType::Enemy, &carsTex));
 
 		firstTime = false;
 	}
 
-	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 115, 0.6));
-	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 110 * 2 + 5, 0.6));
-	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 110 * 3 + 5, 0.6));
+	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 115, 0.6, ModelType::Enemy, &carsTex));
+	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 110 * 2 + 5, 0.6, ModelType::Enemy, &carsTex));
+	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 110 * 3 + 5, 0.6, ModelType::Enemy, &carsTex));
 
-	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 5 + 5, 0.4, ModelType::Log));
-	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 6 + 5, 0.4, ModelType::Log));
-	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 7 + 5, 0.4, ModelType::Log));
+	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 5 + 5, 0.4, ModelType::Log, &logsTex));
+	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 6 + 5, 0.4, ModelType::Log, &logsTex));
+	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 7 + 5, 0.4, ModelType::Log, &logsTex));
 
 	glutTimerFunc(1500, Tick, 0);
 }
@@ -244,12 +265,14 @@ void Protect()
 {
 	frog.SetColor(Color{ 0.7,0.05, 0.05 });
 	protect = true;
+	frog.texture = &frog_protectedTex;
 }
 
 void UnProtect(int value)
 {
 	frog.SetColor(Color{ 0.2f, 0.5f, 0.3f });
 	protect = false;
+	frog.texture = &frogTex;
 }
 
 
@@ -291,15 +314,9 @@ void ProcessInput(unsigned char key, int x_f, int y_f)
 void ProcessSpecialInput(int key, int x_f, int y_f)
 {
 	if (key == GLUT_KEY_DOWN)
-	{
 		ProcessInput('s', 0, 0);
-		tex.Bind();
-	}
 	if (key == GLUT_KEY_UP)
-	{
 		ProcessInput('w', 0, 0);
-		tex2.Bind();
-	}
 	if (key == GLUT_KEY_LEFT)
 		ProcessInput('a', 0, 0);
 	if (key == GLUT_KEY_RIGHT)
@@ -321,18 +338,15 @@ int main(int argc, char** argv)
 	glutInitWindowSize(WIDTH, HEIGHT);
 	glutCreateWindow("Frogger 2D");
 
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glEnable(GL_TEXTURE_2D);
+
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 
 	ImGui::StyleColorsDark();
-
-	glEnable(GL_TEXTURE_2D | GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-	tex.LoadTexture();
-	tex2.LoadTexture();
 
 	coinsTex.LoadTexture();
 	keyTex.LoadTexture();
@@ -369,9 +383,7 @@ int main(int argc, char** argv)
 	glutIgnoreKeyRepeat(1);
 	glutMainLoop();
 
-	ImGui_ImplOpenGL2_Shutdown();
-	ImGui_ImplGLUT_Shutdown();
-	ImGui::DestroyContext();
+
 
 	return 1;
 }
@@ -432,6 +444,7 @@ bool CheckEnemyCollision()
 				{
 					model.GetModel()->Translate(-600, -600);
 					rest.SetType(ModelType::Null);
+					rest.texture = &rest_normalTex;
 					opened = true;
 				}
 				else if (model.GetModel()->GetType() == ModelType::Protection)

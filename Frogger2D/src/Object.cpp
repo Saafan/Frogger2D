@@ -31,7 +31,6 @@ void Object::RenderObject()
 {
 	if (model->GetX() > WIDTH)
 	{
- 		delete model;
 		empty = true;
 		return;
 	}

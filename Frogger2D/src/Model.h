@@ -55,16 +55,21 @@ public:
 	Primitive GetPrimitive() const { return prim; }
 	void SetPrimitive(Primitive val) { prim = val; }
 
+	void SetTextureCoord(float U, float W);
+	float* GetTextureCoord();
 	void SetColor(Color f_color);
+	Texture* texture = nullptr;
 
 private:
 	Primitive prim;
 
 	float x = 0.0f;
 	float y = 0.0f;
-	
+
 	float width = 0.0f;
 	float height = 0.0f;
+
+	float coord[2] ={1.0f, 1.0f};
 
 	float angle = 0.0f;
 
@@ -72,7 +77,6 @@ private:
 	float rotY = 0.0f;
 	float rotZ = 0.0f;
 
-	Texture* texture = nullptr;
 
 	Color color;
 	ModelType type;

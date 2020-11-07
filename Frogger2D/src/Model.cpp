@@ -71,6 +71,17 @@ void Model::SetType(ModelType f_type)
 
 
 
+void Model::SetTextureCoord(float f_U, float f_W)
+{
+	coord[0] = f_U;
+	coord[1] = f_W;
+}
+
+float* Model::GetTextureCoord()
+{
+	return coord;
+}
+
 void Model::SetColor(Color f_color)
 {
 	color = f_color;
@@ -81,8 +92,11 @@ void Model::RenderPlane()
 {
 	if (texture != NULL)
 	{
-		if(!texture->empty)
+		if (!texture->empty)
+		{
 			texture->Bind();
+			glColor3f(1.0f, 1.0f, 1.0f);
+		}
 		else
 			glBindTexture(GL_TEXTURE_2D, 0);
 	}
@@ -104,11 +118,11 @@ void Model::RenderPlane()
 
 	glTexCoord2f(0.0f, 0.0f);	glVertex2f(0.0f, 0.0f);
 
-	glTexCoord2f(0.0f, 1.0f);	glVertex2f(0.0f, height);
+	glTexCoord2f(0.0f, coord[1]);	glVertex2f(0.0f, height);
 
-	glTexCoord2f(1.0f, 1.0f);	glVertex2f(width, height);
+	glTexCoord2f(coord[0], coord[1]);	glVertex2f(width, height);
 
-	glTexCoord2f(1.0f, 0.0f);	glVertex2f(width, 0.0f);
+	glTexCoord2f(coord[0], 0.0f);	glVertex2f(width, 0.0f);
 	glEnd();
 
 	glPopMatrix();
