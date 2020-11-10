@@ -13,17 +13,11 @@ void Model::RenderTriangle()
 	glPushMatrix();
 
 
-	glTranslatef(-x, -y, 0.0f);
-	glRotatef(13, 0, 0, 1);
-	glTranslatef(x, y, 0.0f);
-
-	glTranslatef(x, y, 0.0f);
-
 	glBegin(GL_TRIANGLES);
 	glColor3f(color.R, color.G, color.B);
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(width, 0.0f, 0.0f);
-	glVertex3f(width / 2, height, 0.0f);
+	glVertex3f(x, y, 0.0f);
+	glVertex3f(width + x, y, 0.0f);
+	glVertex3f(width / 2 + x, height + y, 0.0f);
 	glEnd();
 
 	glPopMatrix();
@@ -34,6 +28,7 @@ void Model::Render()
 {
 	if (GetPrimitive() == Primitive::Plane)
 		RenderPlane();
+
 	if (GetPrimitive() == Primitive::Triangle)
 		RenderTriangle();
 }
@@ -103,29 +98,124 @@ void Model::RenderPlane()
 	else
 		glBindTexture(GL_TEXTURE_2D, 0);
 
+	if (type == ModelType::Character)
+	{
 		glPushMatrix();
 
-	glTranslatef(x, y, 0.0f);
+		glBegin(GL_QUADS);
+		glColor3f(1.0f, 0.2f, 0.2f);
+		glVertex2f(0.0f + x, 0.0f + y);
+		glVertex2f(0.0f + x, 100.0f + y);
+		glVertex2f(100.0f + x, 100.0f + y);
+		glVertex2f(100.0f + x, 0.0f + y);
+		glEnd();
 
-	glRotatef(angle, rotX, rotY, rotZ);
+		glBegin(GL_TRIANGLES);
+		glColor3f(0.98f, 0.93f, 0.67f);
+		glVertex2f(50.0f + x, 60.0f + y);
+		glVertex2f(30.0f + x, 40.0f + y);
+		glVertex2f(70.0f + x, 40.0f + y);
+		glEnd();
 
-	glBegin(GL_QUADS);
+		glPointSize(10);
 
-	if (texture == NULL || texture->empty)
-	{
-		glColor3f(color.R, color.G, color.B);
+		glBegin(GL_POINTS);
+		glVertex2f(6.0f * 5 + x, 16.0f * 5 + y);
+		glVertex2f(14.0f * 5 + x, 16.0f * 5 + y);
+		glEnd();
+
+		glLineWidth(3);
+
+		glBegin(GL_LINES);
+		glVertex2f(4 * 5 + x, 4 * 5 + y);
+		glVertex2f(4 * 5 + x, 2 * 5 + y);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex2f(4 * 5 + x, 4 * 5 + y);
+		glVertex2f(6 * 5 + x, 2 * 5 + y);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex2f(4 * 5 + x, 4 * 5 + y);
+		glVertex2f(2 * 5 + x, 2 * 5 + y);
+		glEnd();
+
+
+		glBegin(GL_LINES);
+		glVertex2f(4 * 5 + x, 4 * 5 + y);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex2f(4 * 5 + x, 4 * 5 + y);
+		glVertex2f(4 * 5 + x, 2 * 5 + y);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex2f(4 * 5 + x, 4 * 5 + y);
+		glVertex2f(6 * 5 + x, 2 * 5 + y);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex2f(4 * 5 + x, 4 * 5 + y);
+		glVertex2f(2 * 5 + x, 2 * 5 + y);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex2f(16 * 5 + x, 4 * 5 + y);
+		glVertex2f(16 * 5 + x, 2 * 5 + y);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex2f(16 * 5 + x, 4 * 5 + y);
+		glVertex2f(18 * 5 + x, 2 * 5 + y);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex2f(16 * 5 + x, 4 * 5 + y);
+		glVertex2f(14 * 5 + x, 2 * 5 + y);
+		glEnd();
 	}
+	else if (type == ModelType::Lane)
+	{
+		glBegin(GL_POLYGON);
+		glColor3f(color.R, color.G, color.B);
+		glVertex2f(0, y);
+		glVertex2f(10, 10 + y);
+		glVertex2f(width - 10, 10 + y);
 
-	glTexCoord2f(0.0f, 0.0f);	glVertex2f(0.0f, 0.0f);
+		glVertex2f(width, y);
+		glVertex2f(width - 10, -10 + y);
+		glVertex2f(10, -10 + y);
+		glEnd();
+	}
+	else
+	{
+		glPushMatrix();
 
-	glTexCoord2f(0.0f, coord[1]);	glVertex2f(0.0f, height);
+		glTranslatef(x, y, 0.0f);
 
-	glTexCoord2f(coord[0], coord[1]);	glVertex2f(width, height);
+		glRotatef(angle, rotX, rotY, rotZ);
 
-	glTexCoord2f(coord[0], 0.0f);	glVertex2f(width, 0.0f);
-	glEnd();
+		glBegin(GL_QUADS);
 
-	glPopMatrix();
+		if (texture == NULL || texture->empty)
+		{
+			glColor3f(color.R, color.G, color.B);
+		}
+
+		glTexCoord2f(0.0f, 0.0f);	glVertex2f(0.0f, 0.0f);
+
+		glTexCoord2f(0.0f, coord[1]);	glVertex2f(0.0f, height);
+
+		glTexCoord2f(coord[0], coord[1]);	glVertex2f(width, height);
+
+		glTexCoord2f(coord[0], 0.0f);	glVertex2f(width, 0.0f);
+		glEnd();
+
+		glPopMatrix();
+	}
 }
+
 
 

@@ -1,10 +1,7 @@
 #include "Renderer.h"
 #include "Model.h"
 #include "Object.h"
-
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_opengl2.h>
-#include <imgui/imgui_impl_glut.h>
+#include <stdio.h>
 #include "Randomize.h"
 #include "Texture.h"
 #include <string>
@@ -38,14 +35,26 @@ Object target(100.0f, 100.0f, 8 * 110, 8 * 110 + 10, 0, ModelType::Key, &targetT
 
 Model border(Primitive::Plane, WIDTH + 40, HEIGHT + 40, -20.0f, -20.0f, Color{ 0.5f, 0.5f, 0.5f }, ModelType::Null, & bordersTex);
 Model grass(Primitive::Plane, WIDTH, 110, 0, 0, Color{ 0.07, 0.42, 0.08 }, ModelType::Null, & grass_areaTex);
-Model frog(Primitive::Plane, 100.0f, 100.0f, 0.0f, 0.0f, Color{ 0.2f, 0.5f, 0.3f }, ModelType::Null, & frogTex);
+Model frog(Primitive::Plane, 100.0f, 100.0f, 0.0f, 0.0f, Color{ 0.2f, 0.5f, 0.3f }, ModelType::Character, & frogTex);
 Model street(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f, Color{ 0.3f, 0.3f, 0.3f }, ModelType::Environment, & streetTex);
-Model rest(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 4, Color{ 0.8f, 0.3f, 0.3f }, ModelType::Collision, & rest_collisionTex);
-Model water(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f * 5, Color{ 0.2f, 0.5f, 0.8f }, ModelType::Water, & waterTex);
+Model rest(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 4, Color{ 0.8f, 0.3f, 0.3f }, ModelType::Null, & rest_collisionTex);
+Model water(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f * 5, Color{ 0.2f, 0.5f, 0.8f }, ModelType::Null, & waterTex);
 Model goal(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 8, Color{ 0.07, 0.42, 0.08 }, ModelType::Goal, & goal_areaTex);
+
+Model borderLane(Primitive::Plane, WIDTH, 10, 0, 0, Color{ 0.3, 0.3, 0.2 }, ModelType::Lane);
+
+struct Vector2
+{
+	float x;
+	float y;
+};
+
 
 std::vector<Model*> models;
 std::vector<Object> objects;
+std::vector<Vector2>  characterCollision;
+std::vector<Model*> bridges;
+
 
 bool firstTime = true;
 bool CheckStaticCollision(float nextX, float nextY);
@@ -56,66 +65,203 @@ bool opened = false;
 bool powerTaken = false;
 bool protect = false;
 
+int laneNum = 5;
 
+int Approx(int x)
+{
+	x = x / 10;
+	x *= 10;
+	return x;
+}
+
+void GenerateCollisionPoints()
+{
+	characterCollision.clear();
+	characterCollision.push_back(Vector2{ frog.GetX() - 1, frog.GetY() + frog.GetHeight() + 1 });					//Top Left
+	characterCollision.push_back(Vector2{ frog.GetX() + frog.GetWidth() + 1, frog.GetY() + frog.GetHeight() + 1 }); // Top Right
+	characterCollision.push_back(Vector2{ frog.GetX() - 1, frog.GetY() - 1 });										// Bottom Left
+	characterCollision.push_back(Vector2{ frog.GetX() + frog.GetWidth() + 1, frog.GetY() - 1 });					// Bottom Right
+
+	glPointSize(3);
+	glBegin(GL_POINTS);
+	glVertex2f(frog.GetX() - 1, frog.GetY() + frog.GetHeight() + 1);
+	glVertex2f(frog.GetX() + frog.GetWidth() + 1, frog.GetY() + frog.GetHeight() + 1);
+	glVertex2f(frog.GetX() - 1, frog.GetY() - 1);
+	glVertex2f(frog.GetX() + frog.GetWidth() + 1, frog.GetY() - 1);
+	glEnd();
+
+}
+
+int CheckBordersCollision()
+{
+	if (frog.GetX() + 5 < 0)
+		return 2;
+
+	if (frog.GetX() + frog.GetWidth() > WIDTH - 10)
+		return 1;
+
+	if (frog.GetY() + 5 < 0)
+		return 2;
+
+	if (frog.GetY() + frog.GetHeight() > HEIGHT - 10)
+		return 0;
+
+	return -1;
+}
+
+bool CheckBridgeCollision()
+{
+
+	// Top Left     --> 0
+	// Top Right    -->	1
+	// Bottom Left  -->	2
+	// Bottom Right --> 3
+
+	bool top = false;
+	bool bottom = false;
+	for (size_t i = 0; i < bridges.size(); i++)
+	{
+		if (bridges.at(i)->GetX() < characterCollision.at(0).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(0).x)
+		{
+			if (bridges.at(i)->GetX() < characterCollision.at(1).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(1).x)
+			{
+				if (bridges.at(i)->GetY() < characterCollision.at(0).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(0).y)
+				{
+					if (bridges.at(i)->GetY() < characterCollision.at(1).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(1).y)
+					{
+						std::cout << "TOP ISNIDE BRIDGEEE" << std::endl;
+						top = true;
+					}
+				}
+			}
+		}
+
+		if (bridges.at(i)->GetX() < characterCollision.at(2).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(2).x)
+		{
+			if (bridges.at(i)->GetX() < characterCollision.at(3).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(3).x)
+			{
+				if (bridges.at(i)->GetY() < characterCollision.at(2).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(2).y)
+				{
+					if (bridges.at(i)->GetY() < characterCollision.at(3).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(3).y)
+					{
+						std::cout << " BOTTOM ISNIDE BRIDGEEE" << std::endl;
+						bottom = true;
+					}
+				}
+			}
+		}
+	}
+
+	if (top || bottom)
+		return true;
+	else
+		return false;
+
+}
+
+
+int CheckLaneCollision()
+{
+	static bool onBridge = false;
+	for (size_t i = models.size() - 1; i > 0; i--)
+	{
+		glBegin(GL_POINTS);
+		glVertex2f(models.at(i)->GetX(), models.at(i)->GetY() - 15);
+		glVertex2f(models.at(i)->GetX() + models.at(i)->GetWidth(), models.at(i)->GetY() + models.at(i)->GetHeight());
+		glEnd();
+	}
+
+	for (size_t i = 0; i < bridges.size(); i++)
+	{
+
+	}
+
+	for (size_t i = 0; i < models.size(); i++)
+	{
+		for (size_t j = 0; j < characterCollision.size(); j++)
+		{
+			if (models.at(i)->GetX() < characterCollision.at(j).x && models.at(i)->GetX() + models.at(i)->GetWidth() > characterCollision.at(j).x)
+			{
+				if (models.at(i)->GetY() - 15 < characterCollision.at(j).y && models.at(i)->GetY() - 15 + models.at(i)->GetHeight() > characterCollision.at(j).y)
+				{
+
+					if (models.at(i)->GetType() == ModelType::Lane)
+					{
+						std::cout << "Collided WITH SOMETHING" << std::endl;
+						return j;
+					}
+				}
+			}
+		}
+	}
+	glutPostRedisplay();
+	return -1;
+}
+
+void RenderBorders()
+{
+	Model leftBorder(Primitive::Plane, 20.0f, HEIGHT + 40, -20.0f, -20, Color{}, ModelType::Collision, nullptr);
+	Model rightBorder(Primitive::Plane, 20.0f, HEIGHT + 40, WIDTH, -20, Color{}, ModelType::Collision, nullptr);
+	Model upBorder(Primitive::Plane, WIDTH, 20, 0, HEIGHT, Color{}, ModelType::Collision, nullptr);
+	Model downBorder(Primitive::Plane, WIDTH, 20, 0, -20, Color{}, ModelType::Collision, nullptr);
+	Model triangle1(Primitive::Triangle, 20, 20, -20, -20, Color{ 0.5, 0.5, 0.5 });
+	Model triangle2(Primitive::Triangle, 20, 20, -20, HEIGHT, Color{ 0.5, 0.5, 0.5 });
+	Model triangle3(Primitive::Triangle, 20, 20, WIDTH, -20, Color{ 0.5, 0.5, 0.5 });
+	Model triangle4(Primitive::Triangle, 20, 20, WIDTH, HEIGHT, Color{ 0.5, 0.5, 0.5 });
+
+	leftBorder.Render();
+	rightBorder.Render();
+	upBorder.Render();
+	downBorder.Render();
+
+	GenerateCollisionPoints();
+
+	triangle1.Render();
+	triangle2.Render();
+	triangle3.Render();
+	triangle4.Render();
+
+}
+
+
+
+
+void RenderLanes()
+{
+	for (size_t i = 0; i < laneNum - 1; i++)
+	{
+		models.push_back(new Model(Primitive::Plane, WIDTH - 10, 20, 0, Approx((HEIGHT / laneNum) * (i + 1)), Color{ 0.3, 0.3, 0.2 }, ModelType::Lane));
+		Model* Bridge = new Model(Primitive::Plane, 200, 110, WIDTH / 2 + Randomize(-400, 400), ((HEIGHT / laneNum) * (i + 1)) - 55, Color{ 0.9, 0.2, 0.2 }, ModelType::Bridge);
+
+		models.push_back(Bridge);
+		bridges.push_back(Bridge);
+	}
+}
 
 void renderScene(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	ImGui_ImplOpenGL2_NewFrame();
-	ImGui_ImplGLUT_NewFrame();
+	glClearColor(0.2f, 0.5f, 0.8f, 1.0f);
 
 	std::string line;
 
-
-
-
+	if (firstTime)
 	{
-		ImGui::Begin("Frogger2D");
-
-		ImGui::Text("This is your score: %i", score);
-
-		ImGui::SliderFloat2("Street Tiling: ", street.GetTextureCoord(), 0.1f, 10.0f);
-		ImGui::SliderFloat2("Border Tiling: ", border.GetTextureCoord(), 0.1f, 10.0f);
-		ImGui::SliderFloat2("Grass Area Tiling: ", grass.GetTextureCoord(), 0.1f, 10.0f);
-		ImGui::SliderFloat2("Rest Tiling: ", rest.GetTextureCoord(), 0.1f, 10.0f);
-		ImGui::SliderFloat2("Water Tiling: ", water.GetTextureCoord(), 0.1f, 10.0f);
-		ImGui::SliderFloat2("Goal Area Tiling: ", goal.GetTextureCoord(), 0.1f, 10.0f);
-
-
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
-		ImGui::End();
+		RenderLanes();
+		firstTime = false;
 	}
-
-	border.Render();
-
-	glPushMatrix();
-
 
 	//Environment
-	street.Render();
-	rest.Render();
-	water.Render();
-	goal.Render();
-	grass.Render();
-	target.GetModel()->Render();
-	//Enemies
-	for (size_t i = 0; i < objects.size(); i++)
+	//RenderCharacter();
+	RenderBorders();
+
+	CheckLaneCollision();
+
+	for (size_t i = 0; i < models.size(); i++)
 	{
-		if (objects[i].empty)
-			objects.erase(objects.begin() + i);
-
-		objects[i].RenderObject();
+		models[i]->Render();
 	}
-
 	frog.Render();
-
-	glPopMatrix();
-
-	ImGui::Render();
-	ImGuiIO& io = ImGui::GetIO();
-	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 
 	glutSwapBuffers();
 	CheckEnemyCollision();
@@ -125,46 +271,14 @@ void renderScene(void)
 
 void GenerateKeyProtection()
 {
-	float randX2 = 0.0f;
-	float randX1 = 0.0f;
-	float randY1 = 0.0f;
-	float randY2 = 0.0f;
-	bool repeated = false;
-	do
-	{
-		randX2 = Randomize(0, 16);
-		randX1 = Randomize(0, 16);
-		randY1 = Randomize(1, 3);
-		randY2 = Randomize(1, 3);
-		repeated = false;
-		for (auto& model : objects)
-		{
-			if (model.GetModel()->GetType() == ModelType::Coin)
-			{
-				float powerX = 110 * randX1;
-				float powerY = 110 * randY1 + 5;
 
-				if (model.GetModel()->GetX() == powerX && model.GetModel()->GetY() == powerY)
-					repeated = true;
-			}
-		}
-	} while (randX2 == randX1 || repeated);
-	if (!opened)
-		key.GetModel()->Translate(110 * randX1, 110 * randY1 + 5);
-	else
-		key.GetModel()->Translate(-600, -600);
-
-	if (!powerTaken)
-		protection.GetModel()->Translate(110 * randX2, 110 * randY2 + 5);
-	else
-		protection.GetModel()->Translate(-600, -600);
 }
 
 void GenerateCoins()
 {
 	std::vector<float> prev;
 
-	for (size_t i = 0; i < 25; i++)
+	for (size_t i = 0; i < 25; i += 2)
 	{
 		float randX = Randomize(0, 16);
 		float randY = Randomize(1, 3);
@@ -192,53 +306,28 @@ void GenerateCoins()
 
 void Restart()
 {
-	for (auto& object : objects)
-	{
-		if (object.GetModel()->GetType() == ModelType::Coin)
-			object.empty = true;
-	}
-
-
-	score = 0;
-	rest.SetType(ModelType::Collision);
-	opened = false;
-	powerTaken = false;
-	frog.SetColor(Color{ 0.2f, 0.5f, 0.3f });
-
-	rest.texture = &rest_collisionTex;
-	frog.texture = &frogTex;
-
-	GenerateCoins();
-	GenerateKeyProtection();
+	// 	for (auto& object : objects)
+	// 	{
+	// 		if (object.GetModel()->GetType() == ModelType::Coin)
+	// 			object.empty = true;
+	// 	}
+	// 
+	// 
+	// 	score = 0;
+	// 	rest.SetType(ModelType::Collision);
+	// 	opened = false;
+	// 	powerTaken = false;
+	// 	frog.SetColor(Color{ 0.2f, 0.5f, 0.3f });
+	// 
+	// 	rest.texture = &rest_collisionTex;
+	// 	frog.texture = &frogTex;
+	// 
+	// 	GenerateCoins();
+	// 	GenerateKeyProtection();
 }
 
 void Tick(int value)
 {
-	if (firstTime)
-	{
-		GenerateCoins();
-		GenerateKeyProtection();
-		objects.emplace_back(key);
-		objects.emplace_back(protection);
-
-		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 115, 0.6, ModelType::Enemy, &carsTex));
-		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 110 * 2 + 5, 0.6, ModelType::Enemy, &carsTex));
-		objects.emplace_back(Object(200, 100, rand() % 1000 + 400, 110 * 3 + 5, 0.6, ModelType::Enemy, &carsTex));
-
-		objects.emplace_back(Object(200, 100, rand() % 300, 115, 0.6, ModelType::Enemy, &carsTex));
-		objects.emplace_back(Object(200, 100, rand() % 300, 110 * 2 + 5, 0.6, ModelType::Enemy, &carsTex));
-		objects.emplace_back(Object(200, 100, rand() % 300, 110 * 3 + 5, 0.6, ModelType::Enemy, &carsTex));
-
-		firstTime = false;
-	}
-
-	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 115, 0.6, ModelType::Enemy, &carsTex));
-	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 110 * 2 + 5, 0.6, ModelType::Enemy, &carsTex));
-	objects.emplace_back(Object(200, 100, -(rand() % 500 + 250), 110 * 3 + 5, 0.6, ModelType::Enemy, &carsTex));
-
-	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 5 + 5, 0.4, ModelType::Log, &logsTex));
-	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 6 + 5, 0.4, ModelType::Log, &logsTex));
-	objects.insert(objects.begin(), Object(400, 100, -(rand() % 700 + 450), 110 * 7 + 5, 0.4, ModelType::Log, &logsTex));
 
 	glutTimerFunc(1500, Tick, 0);
 }
@@ -263,7 +352,7 @@ void TickKeyProtection(int value)
 
 void Protect()
 {
-	frog.SetColor(Color{ 0.7,0.05, 0.05 });
+	frog.SetColor(Color{ 0.7, 0.05, 0.05 });
 	protect = true;
 	frog.texture = &frog_protectedTex;
 }
@@ -278,32 +367,47 @@ void UnProtect(int value)
 
 void ProcessInput(unsigned char key, int x_f, int y_f)
 {
+
 	float x = frog.GetX();
 	float y = frog.GetY();
+	int point = CheckLaneCollision();
+
+	if (point == -1)
+		point = CheckBordersCollision();
+
+	// Top Left     ==> 0
+	// Top Right    ==>	1
+	// Bottom Left  ==>	2
+	// Bottom Right ==> 3
+
+	bool onBridge = CheckBridgeCollision();
+
+	if (onBridge)
+		point = -1;
 
 	if (key == 's')
-		if (CheckStaticCollision(x, y - 110))
+		if (point == 2 || point == 3)
 			return;
 		else
-			frog.TranslateAccum(0, -110);
+			frog.TranslateAccum(0, -10);
 
 	if (key == 'w')
-		if (CheckStaticCollision(x, y + 110))
+		if (point == 0 || point == 1)
 			return;
 		else
-			frog.TranslateAccum(0, 110);
+			frog.TranslateAccum(0, 10);
 
 	if (key == 'a')
-		if (CheckStaticCollision(x - 110, y))
+		if (point == 0 || point == 2)
 			return;
 		else
-			frog.TranslateAccum(-110, 0);
+			frog.TranslateAccum(-10, 0);
 
 	if (key == 'd')
-		if (CheckStaticCollision(x + 110, y))
+		if (point == 1 || point == 3)
 			return;
 		else
-			frog.TranslateAccum(110, 0);
+			frog.TranslateAccum(10, 0);
 
 	if (key == '`')
 		exit(1);
@@ -327,9 +431,14 @@ void ProcessSpecialInput(int key, int x_f, int y_f)
 int main(int argc, char** argv)
 {
 
+	if (laneNum > (HEIGHT / frog.GetHeight()))
+	{
+		std::cout << "You Exceeded the Maximum Number of Lanes :(" << std::endl;
+		exit(1);
+	}
+
 	models.push_back(&frog);
-	models.push_back(&rest);
-	models.push_back(&water);
+
 
 
 	glutInit(&argc, argv);
@@ -342,11 +451,6 @@ int main(int argc, char** argv)
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
 
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-	ImGui::StyleColorsDark();
 
 	coinsTex.LoadTexture();
 	keyTex.LoadTexture();
@@ -364,11 +468,6 @@ int main(int argc, char** argv)
 	grass_areaTex.LoadTexture();
 	bordersTex.LoadTexture();
 
-	// Setup Platform/Renderer bindings
-	ImGui_ImplGLUT_Init();
-	ImGui_ImplGLUT_InstallFuncs();
-	ImGui_ImplOpenGL2_Init();
-
 	glutTimerFunc(0, Tick, 500);
 	glutTimerFunc(0, TickKeyProtection, 10);
 	glutTimerFunc(10, TickSpeed, 10);
@@ -380,9 +479,8 @@ int main(int argc, char** argv)
 
 	glutKeyboardFunc(ProcessInput);
 	glutSpecialFunc(ProcessSpecialInput);
-	glutIgnoreKeyRepeat(1);
+	//glutIgnoreKeyRepeat(1);
 	glutMainLoop();
-
 
 
 	return 1;
@@ -391,7 +489,7 @@ int main(int argc, char** argv)
 
 bool CheckStaticCollision(float nextX, float nextY)
 {
-	if (nextX > WIDTH - 100 || nextX < 0 || nextY > HEIGHT - 100 || nextY < 0)
+	if (nextX > WIDTH - 70 || nextX < 0 || nextY > HEIGHT - 70 || nextY < 0)
 		return true;
 
 	for (Model* model : models)
@@ -412,6 +510,10 @@ bool CheckStaticCollision(float nextX, float nextY)
 	return false;
 }
 
+
+
+
+
 bool CheckEnemyCollision()
 {
 
@@ -423,7 +525,7 @@ bool CheckEnemyCollision()
 		{
 			if (frog.GetY() + 5 >= model.GetModel()->GetY() && frog.GetY() <= model.GetModel()->GetY() + model.GetModel()->GetHeight())
 			{
-				if (model.GetModel()->GetType() == ModelType::Enemy)
+				if (model.GetModel()->GetType() == ModelType::Lane)
 				{
 					if (!protect)
 					{
@@ -459,19 +561,19 @@ bool CheckEnemyCollision()
 		}
 	}
 
-	if (frog.GetX() >= water.GetX() && frog.GetX() - 10 <= water.GetX() + water.GetWidth())
-	{
-		if (frog.GetY() + 5 >= water.GetY() && frog.GetY() + 10 <= water.GetY() + water.GetHeight())
-		{
-			if (!onLog)
-			{
-				std::cout << "Water" << std::endl;
-				frog.Translate(0, 0);
-				Restart();
-				return true;
-			}
-		}
-	}
+	// 	if (frog.GetX() >= water.GetX() && frog.GetX() - 10 <= water.GetX() + water.GetWidth())
+	// 	{
+	// 		if (frog.GetY() + 5 >= water.GetY() && frog.GetY() + 10 <= water.GetY() + water.GetHeight())
+	// 		{
+	// 			if (!onLog)
+	// 			{
+	// 				std::cout << "Water" << std::endl;
+	// 				frog.Translate(0, 0);
+	// 				Restart();
+	// 				return true;
+	// 			}
+	// 		}
+	// 	}
 
 	return false;
 }

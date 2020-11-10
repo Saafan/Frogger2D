@@ -9,6 +9,7 @@ enum class Primitive
 
 enum class ModelType
 {
+	Character,
 	Environment,
 	Collision,
 	Goal,
@@ -18,7 +19,9 @@ enum class ModelType
 	Water,
 	Log,
 	Coin,
-	Null
+	Null,
+	Lane,
+	Bridge
 };
 
 struct Color

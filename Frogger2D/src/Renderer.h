@@ -4,8 +4,8 @@
 #include <fstream>
 #include "Texture.h"
 
-const int WIDTH = 1900;
-const int HEIGHT = 1000;
+const int WIDTH = 1100;
+const int HEIGHT = 880;
 
 struct vec2
 {

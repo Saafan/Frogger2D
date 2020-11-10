@@ -145,9 +145,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Object.h" />
     <ClCompile Include="src\Object.cpp" />
-    <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Model.cpp" />
     <ClCompile Include="src\Randomize.cpp" />
     <ClCompile Include="src\Texture.cpp" />
