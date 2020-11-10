@@ -109,7 +109,7 @@ int CheckBordersCollision()
 	return -1;
 }
 
-bool CheckBridgeCollision()
+int CheckBridgeCollision()
 {
 
 	// Top Left     --> 0
@@ -117,8 +117,7 @@ bool CheckBridgeCollision()
 	// Bottom Left  -->	2
 	// Bottom Right --> 3
 
-	bool top = false;
-	bool bottom = false;
+
 	for (size_t i = 0; i < bridges.size(); i++)
 	{
 		if (bridges.at(i)->GetX() < characterCollision.at(0).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(0).x)
@@ -130,7 +129,7 @@ bool CheckBridgeCollision()
 					if (bridges.at(i)->GetY() < characterCollision.at(1).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(1).y)
 					{
 						std::cout << "TOP ISNIDE BRIDGEEE" << std::endl;
-						top = true;
+						return i;
 					}
 				}
 			}
@@ -145,36 +144,32 @@ bool CheckBridgeCollision()
 					if (bridges.at(i)->GetY() < characterCollision.at(3).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(3).y)
 					{
 						std::cout << " BOTTOM ISNIDE BRIDGEEE" << std::endl;
-						bottom = true;
+						return i;
 					}
 				}
 			}
 		}
 	}
 
-	if (top || bottom)
-		return true;
-	else
-		return false;
+	return -1;
 
 }
 
 
 int CheckLaneCollision()
 {
-	static bool onBridge = false;
-	for (size_t i = models.size() - 1; i > 0; i--)
-	{
-		glBegin(GL_POINTS);
-		glVertex2f(models.at(i)->GetX(), models.at(i)->GetY() - 15);
-		glVertex2f(models.at(i)->GetX() + models.at(i)->GetWidth(), models.at(i)->GetY() + models.at(i)->GetHeight());
-		glEnd();
-	}
+	// Top Left     --> 0
+	// Top Right    -->	1
+	// Bottom Left  -->	2
+	// Bottom Right --> 3
 
-	for (size_t i = 0; i < bridges.size(); i++)
-	{
 
-	}
+	int bridge = CheckBridgeCollision();
+
+// 	if (bridge != -1)
+// 		if (frog.GetX() < bridges.at(bridge)->GetX())
+// 			return 0;
+
 
 	for (size_t i = 0; i < models.size(); i++)
 	{
