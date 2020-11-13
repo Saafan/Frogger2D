@@ -21,7 +21,9 @@ enum class ModelType
 	Coin,
 	Null,
 	Lane,
-	Bridge
+	Bridge,
+	DoubleCoin,
+	Target
 };
 
 struct Color

@@ -2,6 +2,7 @@
 
 
 
+
 Object::Object(float width, float height, float x, float y, float speed, ModelType type, Texture* texture)
 {
 	Color color = Color{ 0.8f, 0.2f, 0.0f };
@@ -17,7 +18,7 @@ Object::Object(float width, float height, float x, float y, float speed, ModelTy
 	{
 		color = Color{ 0.7f, 0.7f, 0.7f };
 	}
-	if (type == ModelType::Protection)
+	if (type == ModelType::DoubleCoin)
 	{
 		color = Color{ 0.2f, 0.6, 0.7f };
 	}

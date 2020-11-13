@@ -1,3 +1,8 @@
+
+//Important Note: This was Originally a Frog Crossing Game, However since the Theme was a bit off, I had to recreate the game and refactor the code
+//The Original Frog Game Project with Better Textures: https://github.com/saafan/Frogger2D
+//If you want to Remove the Bounded Textures (Recommended). Just Delete the Images Folders 
+
 #include "Renderer.h"
 #include "Model.h"
 #include "Object.h"
@@ -7,52 +12,29 @@
 #include <string>
 
 Texture bordersTex(".\\images\\borders.png");
-Texture grass_areaTex(".\\images\\grass_area.png");
+Texture laneTex(".\\images\\lane.png");
+Texture chickenTex(".\\images\\chicken.png");
 
-Texture coinsTex(".\\images\\coin.png");
-Texture keyTex(".\\images\\key.png");
 
-Texture frogTex(".\\images\\frog.png");
-Texture frog_protectedTex(".\\images\\frog_protected.png");
-Texture powerUpProtectTex(".\\images\\protect.png");
+Object openUp(100.0f, 100.0f, 0, 0, 0, ModelType::Key);
+Object coinDoubler(100.0f, 100.0f, 0, 0, 0, ModelType::DoubleCoin);
 
-Texture streetTex(".\\images\\street.png");
-
-Texture carsTex(".\\images\\car.png");
-
-Texture rest_collisionTex(".\\images\\rest_collision.png");
-Texture rest_normalTex(".\\images\\rest_normal.png");
-
-Texture waterTex(".\\images\\water.png");
-Texture logsTex(".\\images\\logs.png");
-
-Texture goal_areaTex(".\\images\\goal_area.png");
-Texture targetTex(".\\images\\target.png");
-
-Object key(100.0f, 100.0f, 250, 250, 0, ModelType::Key, &keyTex);
-Object protection(100.0f, 100.0f, 500, 500, 0, ModelType::Protection, &powerUpProtectTex);
-Object target(100.0f, 100.0f, 8 * 110, 8 * 110 + 10, 0, ModelType::Key, &targetTex);
+Object finalTarget(100, 100, WIDTH / 2, HEIGHT - 100, 0, ModelType::Target);
 
 Model border(Primitive::Plane, WIDTH + 40, HEIGHT + 40, -20.0f, -20.0f, Color{ 0.5f, 0.5f, 0.5f }, ModelType::Null, & bordersTex);
-Model grass(Primitive::Plane, WIDTH, 110, 0, 0, Color{ 0.07, 0.42, 0.08 }, ModelType::Null, & grass_areaTex);
-Model frog(Primitive::Plane, 100.0f, 100.0f, 0.0f, 0.0f, Color{ 0.2f, 0.5f, 0.3f }, ModelType::Character, & frogTex);
-Model street(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f, Color{ 0.3f, 0.3f, 0.3f }, ModelType::Environment, & streetTex);
-Model rest(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 4, Color{ 0.8f, 0.3f, 0.3f }, ModelType::Null, & rest_collisionTex);
-Model water(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f * 5, Color{ 0.2f, 0.5f, 0.8f }, ModelType::Null, & waterTex);
-Model goal(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 8, Color{ 0.07, 0.42, 0.08 }, ModelType::Goal, & goal_areaTex);
+Model grass(Primitive::Plane, WIDTH, 110, 0, 0, Color{ 0.07, 0.42, 0.08 }, ModelType::Null);
+Model chicken(Primitive::Plane, 100.0f, 100.0f, 0.0f, 0.0f, Color{ 0.2f, 0.5f, 0.3f }, ModelType::Character, & chickenTex);
+Model street(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f, Color{ 0.3f, 0.3f, 0.3f }, ModelType::Environment);
+Model rest(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 4, Color{ 0.8f, 0.3f, 0.3f }, ModelType::Null);
+Model water(Primitive::Plane, WIDTH, 330.0f, 0.0f, 110.0f * 5, Color{ 0.2f, 0.5f, 0.8f }, ModelType::Null);
+Model goal(Primitive::Plane, WIDTH, 120.0f, 0.0f, 110.0f * 8, Color{ 0.07, 0.42, 0.08 }, ModelType::Goal);
 
 Model borderLane(Primitive::Plane, WIDTH, 10, 0, 0, Color{ 0.3, 0.3, 0.2 }, ModelType::Lane);
-
-struct Vector2
-{
-	float x;
-	float y;
-};
 
 
 std::vector<Model*> models;
 std::vector<Object> objects;
-std::vector<Vector2>  characterCollision;
+std::vector<std::pair<float, float>>  characterCollision;
 std::vector<Model*> bridges;
 
 
@@ -60,54 +42,92 @@ bool firstTime = true;
 bool CheckStaticCollision(float nextX, float nextY);
 bool CheckEnemyCollision();
 
+int coinInc = 0;
+int time = 40;
+const static int startTime = time;
+
 int score = 0;
-bool opened = false;
+bool openUpTaken = false;
 bool powerTaken = false;
 bool protect = false;
+bool gameOver = false;
+bool finished = false;
 
-int laneNum = 5;
 
-int Approx(int x)
+
+int laneNum = 4;
+
+
+void print(int x, int y, char* string)
 {
-	x = x / 10;
-	x *= 10;
-	return x;
+
+	int len, i;
+
+	//set the position of the text in the window using the x and y coordinates
+	glRasterPos2f(x, y);
+
+	//get the length of the string to display
+	len = (int)strlen(string);
+
+	//loop to display character by character
+	for (i = 0; i < len; i++)
+	{
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
+	}
 }
+
+void GenerateCoins()
+{
+
+	for (size_t i = 0; i < 5; i++)
+	{
+		float randX = Randomize(50, WIDTH - 150);
+
+		int lane = Randomize(0, laneNum - 3);
+
+		int beginPoint = (int)bridges.at(lane)->GetY() + 57;
+
+		float randY = Randomize(beginPoint, beginPoint + 50);
+
+		Object coin(100, 100, 0, 0, 0, ModelType::Coin);
+
+		coin.GetModel()->Translate(randX, randY);
+
+		objects.emplace_back(coin);
+	}
+
+}
+
 
 void GenerateCollisionPoints()
 {
 	characterCollision.clear();
-	characterCollision.push_back(Vector2{ frog.GetX() - 1, frog.GetY() + frog.GetHeight() + 1 });					//Top Left
-	characterCollision.push_back(Vector2{ frog.GetX() + frog.GetWidth() + 1, frog.GetY() + frog.GetHeight() + 1 }); // Top Right
-	characterCollision.push_back(Vector2{ frog.GetX() - 1, frog.GetY() - 1 });										// Bottom Left
-	characterCollision.push_back(Vector2{ frog.GetX() + frog.GetWidth() + 1, frog.GetY() - 1 });					// Bottom Right
+	characterCollision.emplace_back(std::pair<float, float>{ chicken.GetX() - 1, chicken.GetY() + chicken.GetHeight() + 1 });					//Top Left
+	characterCollision.emplace_back(std::pair<float, float>{ chicken.GetX() + chicken.GetWidth() + 1, chicken.GetY() + chicken.GetHeight() + 1 }); // Top Right
+	characterCollision.emplace_back(std::pair<float, float>{ chicken.GetX() - 1, chicken.GetY() - 1 });										// Bottom Left
+	characterCollision.emplace_back(std::pair<float, float>{ chicken.GetX() + chicken.GetWidth() + 1, chicken.GetY() - 1 });					// Bottom Right
 
-	glPointSize(3);
-	glBegin(GL_POINTS);
-	glVertex2f(frog.GetX() - 1, frog.GetY() + frog.GetHeight() + 1);
-	glVertex2f(frog.GetX() + frog.GetWidth() + 1, frog.GetY() + frog.GetHeight() + 1);
-	glVertex2f(frog.GetX() - 1, frog.GetY() - 1);
-	glVertex2f(frog.GetX() + frog.GetWidth() + 1, frog.GetY() - 1);
-	glEnd();
 
 }
 
 int CheckBordersCollision()
 {
-	if (frog.GetX() + 5 < 0)
+	if (chicken.GetX() + 5 < 0)
 		return 2;
 
-	if (frog.GetX() + frog.GetWidth() > WIDTH - 10)
+	if (chicken.GetX() + chicken.GetWidth() > WIDTH - 10)
 		return 1;
 
-	if (frog.GetY() + 5 < 0)
+	if (chicken.GetY() + 5 < 0)
 		return 2;
 
-	if (frog.GetY() + frog.GetHeight() > HEIGHT - 10)
+	if (chicken.GetY() + chicken.GetHeight() > HEIGHT - 10)
 		return 0;
 
 	return -1;
 }
+
+
 
 int CheckBridgeCollision()
 {
@@ -120,30 +140,28 @@ int CheckBridgeCollision()
 
 	for (size_t i = 0; i < bridges.size(); i++)
 	{
-		if (bridges.at(i)->GetX() < characterCollision.at(0).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(0).x)
+		if (bridges.at(i)->GetX() < characterCollision.at(0).first && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(0).first)
 		{
-			if (bridges.at(i)->GetX() < characterCollision.at(1).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(1).x)
+			if (bridges.at(i)->GetX() < characterCollision.at(1).first && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(1).first)
 			{
-				if (bridges.at(i)->GetY() < characterCollision.at(0).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(0).y)
+				if (bridges.at(i)->GetY() < characterCollision.at(0).second && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(0).second)
 				{
-					if (bridges.at(i)->GetY() < characterCollision.at(1).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(1).y)
+					if (bridges.at(i)->GetY() < characterCollision.at(1).second && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(1).second)
 					{
-						std::cout << "TOP ISNIDE BRIDGEEE" << std::endl;
 						return i;
 					}
 				}
 			}
 		}
 
-		if (bridges.at(i)->GetX() < characterCollision.at(2).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(2).x)
+		if (bridges.at(i)->GetX() < characterCollision.at(2).first && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(2).first)
 		{
-			if (bridges.at(i)->GetX() < characterCollision.at(3).x && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(3).x)
+			if (bridges.at(i)->GetX() < characterCollision.at(3).first && bridges.at(i)->GetX() + bridges.at(i)->GetWidth() > characterCollision.at(3).first)
 			{
-				if (bridges.at(i)->GetY() < characterCollision.at(2).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(2).y)
+				if (bridges.at(i)->GetY() < characterCollision.at(2).second && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(2).second)
 				{
-					if (bridges.at(i)->GetY() < characterCollision.at(3).y && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(3).y)
+					if (bridges.at(i)->GetY() < characterCollision.at(3).second && bridges.at(i)->GetY() + bridges.at(i)->GetHeight() > characterCollision.at(3).second)
 					{
-						std::cout << " BOTTOM ISNIDE BRIDGEEE" << std::endl;
 						return i;
 					}
 				}
@@ -158,31 +176,19 @@ int CheckBridgeCollision()
 
 int CheckLaneCollision()
 {
-	// Top Left     --> 0
-	// Top Right    -->	1
-	// Bottom Left  -->	2
-	// Bottom Right --> 3
-
-
 	int bridge = CheckBridgeCollision();
-
-// 	if (bridge != -1)
-// 		if (frog.GetX() < bridges.at(bridge)->GetX())
-// 			return 0;
-
 
 	for (size_t i = 0; i < models.size(); i++)
 	{
 		for (size_t j = 0; j < characterCollision.size(); j++)
 		{
-			if (models.at(i)->GetX() < characterCollision.at(j).x && models.at(i)->GetX() + models.at(i)->GetWidth() > characterCollision.at(j).x)
+			if (models.at(i)->GetX() < characterCollision.at(j).first && models.at(i)->GetX() + models.at(i)->GetWidth() > characterCollision.at(j).first)
 			{
-				if (models.at(i)->GetY() - 15 < characterCollision.at(j).y && models.at(i)->GetY() - 15 + models.at(i)->GetHeight() > characterCollision.at(j).y)
+				if (models.at(i)->GetY() - 15 < characterCollision.at(j).second && models.at(i)->GetY() - 15 + models.at(i)->GetHeight() > characterCollision.at(j).second)
 				{
 
 					if (models.at(i)->GetType() == ModelType::Lane)
 					{
-						std::cout << "Collided WITH SOMETHING" << std::endl;
 						return j;
 					}
 				}
@@ -195,14 +201,14 @@ int CheckLaneCollision()
 
 void RenderBorders()
 {
-	Model leftBorder(Primitive::Plane, 20.0f, HEIGHT + 40, -20.0f, -20, Color{}, ModelType::Collision, nullptr);
-	Model rightBorder(Primitive::Plane, 20.0f, HEIGHT + 40, WIDTH, -20, Color{}, ModelType::Collision, nullptr);
-	Model upBorder(Primitive::Plane, WIDTH, 20, 0, HEIGHT, Color{}, ModelType::Collision, nullptr);
-	Model downBorder(Primitive::Plane, WIDTH, 20, 0, -20, Color{}, ModelType::Collision, nullptr);
-	Model triangle1(Primitive::Triangle, 20, 20, -20, -20, Color{ 0.5, 0.5, 0.5 });
-	Model triangle2(Primitive::Triangle, 20, 20, -20, HEIGHT, Color{ 0.5, 0.5, 0.5 });
-	Model triangle3(Primitive::Triangle, 20, 20, WIDTH, -20, Color{ 0.5, 0.5, 0.5 });
-	Model triangle4(Primitive::Triangle, 20, 20, WIDTH, HEIGHT, Color{ 0.5, 0.5, 0.5 });
+	Model leftBorder(Primitive::Plane, 20.0f, HEIGHT + 40, -20.0f, -20, Color{}, ModelType::Collision, &bordersTex);
+	Model rightBorder(Primitive::Plane, 20.0f, HEIGHT + 40, WIDTH, -20, Color{}, ModelType::Collision, &bordersTex);
+	Model upBorder(Primitive::Plane, WIDTH, 20, 0, HEIGHT, Color{}, ModelType::Collision, &bordersTex);
+	Model downBorder(Primitive::Plane, WIDTH, 20, 0, -20, Color{}, ModelType::Collision, &bordersTex);
+	Model triangle1(Primitive::Triangle, 20, 20, -20, -20, Color{ 0.5, 0.5, 0.5 }, ModelType::Collision);
+	Model triangle2(Primitive::Triangle, 20, 20, -20, HEIGHT, Color{ 0.5, 0.5, 0.5 }, ModelType::Collision);
+	Model triangle3(Primitive::Triangle, 20, 20, WIDTH, -20, Color{ 0.5, 0.5, 0.5 }, ModelType::Collision);
+	Model triangle4(Primitive::Triangle, 20, 20, WIDTH, HEIGHT, Color{ 0.5, 0.5, 0.5 }, ModelType::Collision);
 
 	leftBorder.Render();
 	rightBorder.Render();
@@ -223,10 +229,11 @@ void RenderBorders()
 
 void RenderLanes()
 {
+
 	for (size_t i = 0; i < laneNum - 1; i++)
 	{
-		models.push_back(new Model(Primitive::Plane, WIDTH - 10, 20, 0, Approx((HEIGHT / laneNum) * (i + 1)), Color{ 0.3, 0.3, 0.2 }, ModelType::Lane));
-		Model* Bridge = new Model(Primitive::Plane, 200, 110, WIDTH / 2 + Randomize(-400, 400), ((HEIGHT / laneNum) * (i + 1)) - 55, Color{ 0.9, 0.2, 0.2 }, ModelType::Bridge);
+		models.push_back(new Model(Primitive::Plane, WIDTH - 10, 20, 0, (HEIGHT / laneNum) * (i + 1), Color{ 0.3, 0.3, 0.2 }, ModelType::Lane, &laneTex));
+		Model* Bridge = new Model(Primitive::Plane, 200, 110, Randomize(150, WIDTH - 180), ((HEIGHT / laneNum) * (i + 1)) - 55, Color{ 0.2, 0.5, 0.8 }, ModelType::Bridge);
 
 		models.push_back(Bridge);
 		bridges.push_back(Bridge);
@@ -235,96 +242,123 @@ void RenderLanes()
 
 void renderScene(void)
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.2f, 0.5f, 0.8f, 1.0f);
+
+
 
 	std::string line;
 
-	if (firstTime)
-	{
-		RenderLanes();
-		firstTime = false;
-	}
-
 	//Environment
 	//RenderCharacter();
-	RenderBorders();
 
-	CheckLaneCollision();
-
-	for (size_t i = 0; i < models.size(); i++)
+	if (time <= 0)
 	{
-		models[i]->Render();
+		gameOver = true;
 	}
-	frog.Render();
+
+	if (finished)
+	{
+		static int elapsedTime = startTime - time;
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(0.2f, 0.5f, 0.8f, 1.0f);
+
+		glColor3f(1, 1, 1);
+		char* p0s[20];
+		sprintf((char*)p0s, "You Finished the Game. Score: %d  In: %i Seconds", score, elapsedTime);
+		print(WIDTH / 2 - 200, HEIGHT / 2, (char*)p0s);
+	}
+	else if (gameOver)
+	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(1.00f, 0.20f, 0.20f, 1.0f);
+
+		static int elapsedTime = startTime - time;
+		glColor3f(0, 0, 0);
+		char* p0s[20];
+		sprintf((char*)p0s, "You Lost the Game. Score: %d", score);
+		print(WIDTH / 2 - 120, HEIGHT / 2, (char*)p0s);
+	}
+	else
+	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(0.2f, 0.5f, 0.8f, 1.0f);
+
+		glColor3f(1, 0, 0);
+		char* p0s[20];
+		sprintf((char*)p0s, "Score: %d, Time: %i", score, time);
+		print(WIDTH - 300, HEIGHT - 50, (char*)p0s);
+
+		finalTarget.RenderObject();
+
+
+		RenderBorders();
+		CheckLaneCollision();
+
+		for (size_t i = 0; i < models.size(); i++)
+		{
+			models[i]->Render();
+		}
+
+		for (size_t i = 0; i < objects.size(); i++)
+		{
+			objects.at(i).RenderObject();
+		}
+
+		openUp.RenderObject();
+		coinDoubler.RenderObject();
+
+		chicken.Render();
+
+
+		CheckEnemyCollision();
+	}
+	glPointSize(10);
+	glBegin(GL_POINTS);
+	glColor3f(1, 0, 0);
+	glEnd();
 
 	glutSwapBuffers();
-	CheckEnemyCollision();
 	glutPostRedisplay();
 
 }
 
-void GenerateKeyProtection()
+void ScatterKeyDoubleCoins()
 {
 
+	float randX1 = Randomize(50, WIDTH - 150);
+	float randX2 = Randomize(50, WIDTH - 150);
+
+	int lane1 = Randomize(0, (laneNum - 3));
+	int lane2 = Randomize(0, (laneNum - 3));
+
+	int beginPoint1 = (int)bridges.at(lane1)->GetY() + 57;
+	int beginPoint2 = (int)bridges.at(lane2)->GetY() + 57;
+
+	float randY1 = Randomize(beginPoint1, beginPoint1 + 20);
+	float randY2 = Randomize(beginPoint2, beginPoint2 + 20);
+
+
+	if (!openUpTaken)
+		openUp.GetModel()->Translate(randX1, randY1);
+	if (!powerTaken)
+		coinDoubler.GetModel()->Translate(randX2, randY2);
 }
 
-void GenerateCoins()
-{
-	std::vector<float> prev;
-
-	for (size_t i = 0; i < 25; i += 2)
-	{
-		float randX = Randomize(0, 16);
-		float randY = Randomize(1, 3);
-		for (size_t i = 0; i < prev.size(); i++)
-		{
-			if (prev.at(i) == randX)
-			{
-				i--;
-				continue;
-			}
-			else
-				prev.push_back(randX);
-		}
-		Object coin(100, 100, 0, 0, 0, ModelType::Coin, &coinsTex);
-
-		if (i < 12)
-			coin.GetModel()->Translate(110 * randX, 110 * randY + 5);
-		else
-			coin.GetModel()->Translate(110 * randX, 110 * (randY + 4) + 5);
-
-		objects.emplace_back(coin);
-
-	}
-}
-
-void Restart()
-{
-	// 	for (auto& object : objects)
-	// 	{
-	// 		if (object.GetModel()->GetType() == ModelType::Coin)
-	// 			object.empty = true;
-	// 	}
-	// 
-	// 
-	// 	score = 0;
-	// 	rest.SetType(ModelType::Collision);
-	// 	opened = false;
-	// 	powerTaken = false;
-	// 	frog.SetColor(Color{ 0.2f, 0.5f, 0.3f });
-	// 
-	// 	rest.texture = &rest_collisionTex;
-	// 	frog.texture = &frogTex;
-	// 
-	// 	GenerateCoins();
-	// 	GenerateKeyProtection();
-}
 
 void Tick(int value)
 {
 
-	glutTimerFunc(1500, Tick, 0);
+	glutTimerFunc(3000, Tick, 0);
+}
+
+
+void ScatterBridges(int value)
+{
+	for (size_t i = 0; i < bridges.size(); i++)
+	{
+		bridges[i]->Translate(Randomize(180, WIDTH - 250), bridges[i]->GetY());
+	}
+
+	glutTimerFunc(3000, ScatterBridges, 0);
 }
 
 void TickSpeed(int value)
@@ -341,68 +375,72 @@ void TickSpeed(int value)
 
 void TickKeyProtection(int value)
 {
-	GenerateKeyProtection();
-	glutTimerFunc(5000, TickKeyProtection, 0);
+	ScatterKeyDoubleCoins();
+	glutTimerFunc(4000, TickKeyProtection, 0);
 }
 
-void Protect()
+
+void ConsumeTime(int value)
 {
-	frog.SetColor(Color{ 0.7, 0.05, 0.05 });
-	protect = true;
-	frog.texture = &frog_protectedTex;
+	if (time > 0)
+	{
+		if (!finished)
+			time--;
+	}
+	else
+		gameOver = true;
+	glutTimerFunc(1000, ConsumeTime, 0);
 }
 
-void UnProtect(int value)
+void DoubleCoin()
 {
-	frog.SetColor(Color{ 0.2f, 0.5f, 0.3f });
-	protect = false;
-	frog.texture = &frogTex;
+	coinInc++;
 }
 
 
 void ProcessInput(unsigned char key, int x_f, int y_f)
 {
 
-	float x = frog.GetX();
-	float y = frog.GetY();
+	float x = chicken.GetX();
+	float y = chicken.GetY();
 	int point = CheckLaneCollision();
 
 	if (point == -1)
 		point = CheckBordersCollision();
+
+	int currentBridge = CheckBridgeCollision();
+
+	if (currentBridge != -1)
+		point = -1;
 
 	// Top Left     ==> 0
 	// Top Right    ==>	1
 	// Bottom Left  ==>	2
 	// Bottom Right ==> 3
 
-	bool onBridge = CheckBridgeCollision();
-
-	if (onBridge)
-		point = -1;
-
 	if (key == 's')
 		if (point == 2 || point == 3)
 			return;
 		else
-			frog.TranslateAccum(0, -10);
+			chicken.TranslateAccum(0, -10);
 
 	if (key == 'w')
 		if (point == 0 || point == 1)
 			return;
 		else
-			frog.TranslateAccum(0, 10);
+			chicken.TranslateAccum(0, 10);
 
 	if (key == 'a')
 		if (point == 0 || point == 2)
 			return;
 		else
-			frog.TranslateAccum(-10, 0);
+			chicken.TranslateAccum(-10, 0);
 
 	if (key == 'd')
 		if (point == 1 || point == 3)
 			return;
 		else
-			frog.TranslateAccum(10, 0);
+			chicken.TranslateAccum(10, 0);
 
 	if (key == '`')
 		exit(1);
@@ -426,15 +464,25 @@ void ProcessSpecialInput(int key, int x_f, int y_f)
 int main(int argc, char** argv)
 {
 
-	if (laneNum > (HEIGHT / frog.GetHeight()))
+
+	if (firstTime)
+	{
+		RenderLanes();
+		firstTime = false;
+		GenerateCoins();
+	}
+
+
+	if (laneNum > (HEIGHT / chicken.GetHeight()))
 	{
 		std::cout << "You Exceeded the Maximum Number of Lanes :(" << std::endl;
 		exit(1);
 	}
 
-	models.push_back(&frog);
-
-
+	models.push_back(&chicken);
+	objects.push_back(finalTarget);
+	objects.push_back(openUp);
+	objects.push_back(coinDoubler);
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
@@ -447,26 +495,15 @@ int main(int argc, char** argv)
 	glEnable(GL_TEXTURE_2D);
 
 
-	coinsTex.LoadTexture();
-	keyTex.LoadTexture();
-	powerUpProtectTex.LoadTexture();
-	frogTex.LoadTexture();
-	streetTex.LoadTexture();
-	carsTex.LoadTexture();
-	rest_collisionTex.LoadTexture();
-	rest_normalTex.LoadTexture();
-	frog_protectedTex.LoadTexture();
-	targetTex.LoadTexture();
-	waterTex.LoadTexture();
-	logsTex.LoadTexture();
-	goal_areaTex.LoadTexture();
-	grass_areaTex.LoadTexture();
+	laneTex.LoadTexture();
 	bordersTex.LoadTexture();
+	chickenTex.LoadTexture();
 
 	glutTimerFunc(0, Tick, 500);
-	glutTimerFunc(0, TickKeyProtection, 10);
+	glutTimerFunc(0, TickKeyProtection, 100);
+	glutTimerFunc(1000, ConsumeTime, 0);
 	glutTimerFunc(10, TickSpeed, 10);
-
+	glutTimerFunc(3000, ScatterBridges, 10);
 	gluOrtho2D(-20, WIDTH + 20, -20, HEIGHT + 20);
 
 	glutDisplayFunc(renderScene);
@@ -505,9 +542,17 @@ bool CheckStaticCollision(float nextX, float nextY)
 	return false;
 }
 
-
-
-
+int Lane()
+{
+	for (size_t i = 0; i < laneNum; i++)
+	{
+		if (characterCollision[0].second < bridges.at(i)->GetY() + bridges.at(i)->GetHeight() / 2)
+		{
+			std::cout << i << std::endl;
+			return i;
+		}
+	}
+}
 
 bool CheckEnemyCollision()
 {
@@ -516,59 +561,45 @@ bool CheckEnemyCollision()
 
 	for (Object model : objects)
 	{
-		if (frog.GetX() + frog.GetWidth() >= model.GetModel()->GetX() && frog.GetX() - 10 <= model.GetModel()->GetX() + model.GetModel()->GetWidth())
+		for (const auto& point : characterCollision)
 		{
-			if (frog.GetY() + 5 >= model.GetModel()->GetY() && frog.GetY() <= model.GetModel()->GetY() + model.GetModel()->GetHeight())
+			if (point.first >= model.GetModel()->GetX() && point.first - 10 <= model.GetModel()->GetX() + model.GetModel()->GetWidth())
 			{
-				if (model.GetModel()->GetType() == ModelType::Lane)
+				if (point.second + 5 >= model.GetModel()->GetY() && point.second <= model.GetModel()->GetY() + model.GetModel()->GetHeight())
 				{
-					if (!protect)
-					{
-						std::cout << "DEATH!!" << std::endl;
-						frog.Translate(0, 0);
-						Restart();
-						return true;
-					}
-				}
-				else if (model.GetModel()->GetType() == ModelType::Log && frog.GetX() - model.GetModel()->GetX() > -5 && frog.GetX() - model.GetModel()->GetX() + frog.GetWidth() < model.GetModel()->GetWidth())
-					onLog = true;
-				else if (model.GetModel()->GetType() == ModelType::Coin)
-				{
-					score++;
-					model.GetModel()->Translate(-600, -600);
-				}
-				else if (model.GetModel()->GetType() == ModelType::Key)
-				{
-					model.GetModel()->Translate(-600, -600);
-					rest.SetType(ModelType::Null);
-					rest.texture = &rest_normalTex;
-					opened = true;
-				}
-				else if (model.GetModel()->GetType() == ModelType::Protection)
-				{
-					model.GetModel()->Translate(-600, -600);
-					powerTaken = true;
-					Protect();
-					glutTimerFunc(3000, UnProtect, 0);
-				}
 
+					if (model.GetModel()->GetType() == ModelType::Coin)
+					{
+						score += 1 + coinInc;
+						model.GetModel()->Translate(-600, -600);
+					}
+
+					else if (model.GetModel()->GetType() == ModelType::Protection)
+					{
+
+					}
+					else if (model.GetModel()->GetType() == ModelType::Target)
+					{
+						finished = true;
+					}
+					else if (model.GetModel()->GetType() == ModelType::Key)
+					{
+						int curLane = Lane();
+						openUpTaken = true;
+						bridges.at(curLane)->Translate(characterCollision[0].first - 20, bridges.at(curLane)->GetY());
+						model.GetModel()->Translate(-600, -600);
+					}
+					else if (model.GetModel()->GetType() == ModelType::DoubleCoin)
+					{
+						DoubleCoin();
+						model.GetModel()->Translate(-600, -600);
+						powerTaken = true;
+					}
+
+				}
 			}
 		}
 	}
-
-	// 	if (frog.GetX() >= water.GetX() && frog.GetX() - 10 <= water.GetX() + water.GetWidth())
-	// 	{
-	// 		if (frog.GetY() + 5 >= water.GetY() && frog.GetY() + 10 <= water.GetY() + water.GetHeight())
-	// 		{
-	// 			if (!onLog)
-	// 			{
-	// 				std::cout << "Water" << std::endl;
-	// 				frog.Translate(0, 0);
-	// 				Restart();
-	// 				return true;
-	// 			}
-	// 		}
-	// 	}
 
 	return false;
 }
